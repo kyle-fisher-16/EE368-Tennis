@@ -5,6 +5,7 @@
 import numpy as np
 import cv2 as cv
 
+# note to self: opencv reads images in and stores as BGR, not RGB!!!
 
 class VideoReader(object):
     # opens video files and fills in useful parameters
@@ -41,8 +42,6 @@ class VideoReader(object):
                 ret, frame = self.readFrame()
                 done = False
                 c = cv.waitKey(1) & 0xFF
-                print ord('q')
-                print c
                 if  c == ord('q') or not(ret):
                     done = True
                     return
