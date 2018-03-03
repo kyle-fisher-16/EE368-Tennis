@@ -35,7 +35,7 @@ def main():
         #cv.imshow('binary frame ' + str(frame_id), cv.resize(frame_bw, (960, 540)))
         c = cv.waitKey(1) & 0xFF
         if frame_id+1 < num_frames:
-            vr.setNextFrame(frame_id+1)  # why +5?
+            vr.setNextFrame(frame_id+1)  # why +5? (question from Megan)
         ret, frame2 = vr.readFrame()
         thresh, frame2_bw = cv.threshold(frame2[:,:,1], 220, 255, cv.THRESH_BINARY)
         # performing subtraction on uints will zero out second frame to get only ball from first frame
@@ -84,6 +84,8 @@ def main():
             cv.waitKey(200)
         else:
             print 'No ball found in frame ' + str(frame_id)
+
+
 
 
         #c = cv.waitKey(1) & 0xFF
