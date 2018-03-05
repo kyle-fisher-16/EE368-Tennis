@@ -15,190 +15,127 @@ import sys
 class BallFinder(object):
     def __init__(self):
         # hsv in opencv: h [0,179], s [0,255], v [0,255]
-        ball_col_hsv = np.array([int(44), int(115), int(250)])
+        self.ballColHsv = np.array([int(44), int(115), int(250)])
         # far away balls have very small saturation levels
-        sat_thresh = 75;
-        val_thresh = 5;
-        hue_thresh = 20;
-        lower_col = ball_col_hsv - [hue_thresh, sat_thresh, val_thresh]
-        upper_col = ball_col_hsv + [hue_thresh, sat_thresh, val_thresh]
+        satThresh = 75;
+        valThresh = 5;
+        hueThresh = 20;
+        self.lowerCol = self.ballColHsv - [hueThresh, satThresh, valThresh]
+        self.upperCol = self.ballColHsv + [hueThresh, satThresh, valThresh]
         # centroid of found ball in motion for tracking
-        ball_pixel_loc = []
+        self.ballPixelLoc = [0,0]
+        # maybe we should try like kalman filtering this or something?
 
+    # returns the binary frame difference between frames 1 and 2
+    # use to locate the ball initially where frame2 for background subtraction
+    # set withFilt to False if don't want to perform opening to get rid of noise
+        # if ball is far away it is very small and
+        # may be smaller than noise in foreground
+    def maskDiff(self, frame1, frame2, withFilt=True):
+        hsvFrame1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
+        hsvFrame2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2HSV)
+        mask1 = cv2.inRange(hsvFrame1, self.lowerCol, self.upperCol)
+        mask2 = cv2.inRange(hsvFrame2, self.lowerCol, self.upperCol)
+        # remember that these are uints, so no negative values
+        # means that only ball in first frame will appear
+        # if want balls in both frames, use bitwise xor
+        frameDiff = mask1 - mask2
+        if withFilt:
+            se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+            frameDiffFilt = cv2.morphologyEx(frameDiff, cv2.MORPH_OPEN, se)
+            return frameDiffFilt
+        else:
+            return frameDiff
 
-def main():
-    # TODO: code restructure
-    # find better spot for these...
-    # hsv in opencv: h [0,179], s [0,255], v [0,255]
-    ball_col_hsv = np.array([int(44), int(115), int(250)])
-    # far away balls have very small saturation levels
-    sat_thresh = 75;
-    val_thresh = 5;
-    hue_thresh = 20;
-    lower_col = ball_col_hsv - [hue_thresh, sat_thresh, val_thresh]
-    upper_col = ball_col_hsv + [hue_thresh, sat_thresh, val_thresh]
-
-    vr = VideoReader('../UntrackedFiles/clip25.mp4')
-
-    # playing with HSV space
-    vr.setNextFrame(90)
-    frame_id = vr.getNextFrameIdx()
-    ret, frame1 = vr.readFrame()
-    # vr.setNextFrame(frame_id+2)
-    vr.setNextFrame(88)
-    ret, frame2 = vr.readFrame()
-    hsv_frame1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
-    hsv_frame2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2HSV)
-    mask1 = cv2.inRange(hsv_frame1, lower_col, upper_col)
-    mask2 = cv2.inRange(hsv_frame2, lower_col, upper_col)
-    frame_diff = mask1 - mask2
-    se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
-    frame_diff_filt = cv2.morphologyEx(frame_diff, cv2.MORPH_OPEN, se)
-    # cv2.imwrite('../UntrackedFiles/hsv_mask.jpg', mask)
-    cv2.imshow('hsv frame', cv2.resize(frame_diff_filt, (960, 540)))
-    cv2.waitKey(1)
-
-    # quit sequence:
-    print "press q enter to quit "
-    done = False
-    while(not(done)):
-        c = sys.stdin.read(1)
-        if c == 'q':
-           done = True
-
-    vr.close()
-    return
-
-
-
-
-    # background subtraction:
-    # maybe don't get immediate frame so more of a difference in ball location
-        # and ball doesn't get totally subtracted?
-    num_frames = int(vr.getNumFrames())
-    #print 'Number of frames: ' + str(num_frames)
-    # frame_id = vr.getNextFrameIdx()
-    #frame_id = 90
-    for frame_id in range(0, num_frames-1):
-    #frame_id = 10
-        vr.setNextFrame(frame_id)
-        ret, frame = vr.readFrame()
-        #cv2.imshow('original frame '+str(frame_id), cv2.resize(frame, (960, 540)))
-        # only process green channel since balls are green and will hopefully
-            # show most distinctly in green channel
-        # threshold(input image, threshold, max value, type of thresholding)
-        thresh, frame_bw = cv2.threshold(frame[:,:,1], 220, 1, cv2.THRESH_BINARY)
-        # remove white pixels from tresholded values
-        thresh, frame_red = cv2.threshold(frame[:,:,2], 240, 1, cv2.THRESH_BINARY_INV)
-        thresh, frame_blue = cv2.threshold(frame[:,:,0], 230, 1, cv2.THRESH_BINARY_INV)
-        frame_bw_ball = np.logical_and(frame_bw, np.logical_and(frame_red, frame_blue))
-        frame_bw_ball = frame_bw_ball.astype(float) * 255
-        se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
-        frame_bw_ball = cv2.morphologyEx(frame_bw_ball, cv2.MORPH_CLOSE, se)
-        #cv2.imshow('frame bw ball', cv2.resize(frame_bw_ball, (960, 540)))
-
-        #cv2.imshow('binary frame ' + str(frame_id), cv2.resize(frame_bw, (960, 540)))
-        c = cv2.waitKey(1) & 0xFF
-        if frame_id+5 < num_frames:
-            vr.setNextFrame(frame_id+5)
-        ret, frame2 = vr.readFrame()
-        thresh, frame2_bw = cv2.threshold(frame2[:,:,1], 220, 1, cv2.THRESH_BINARY)
-        thresh, frame_red = cv2.threshold(frame[:,:,2], 240, 1, cv2.THRESH_BINARY_INV)
-        thresh, frame_blue = cv2.threshold(frame[:,:,0], 230, 1, cv2.THRESH_BINARY_INV)
-        frame2_bw_ball = np.logical_and(frame2_bw, np.logical_and(frame_red, frame_blue))
-        frame2_bw_ball = frame2_bw_ball.astype(float) * 255
-        se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5))
-        frame2_bw_ball = cv2.morphologyEx(frame2_bw_ball, cv2.MORPH_CLOSE, se)
-        #cv2.imshow('frame2 bw ball', cv2.resize(frame2_bw_ball, (960, 540)))
-
-
-        # performing subtraction on uints will zero out second frame to get only ball from first frame
-        # we can then get ball starting location
-        # maybe try with dilated background to subract more of background?
-        #se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
-        #frame2_bw_dilate = cv2.dilate(frame2_bw, se)
-        frame_diff = frame_bw_ball - frame2_bw_ball   # maybe try bitwise xor--> will give 2 balls, one from each frame
-        # perform opening to get rid of noise/ non ball pixels
-        frame_diff = cv2.morphologyEx(frame_diff, cv2.MORPH_OPEN, se)
-        frame_diff = frame_diff.astype(np.uint8)
-        #cv2.imwrite('../UntrackedFiles/frame_diff.jpg', frame_diff)
-        cv2.imshow('frame diff ' + str(frame_id), cv2.resize(frame_diff, (960, 540)))
-        #c = cv2.waitKey(1) & 0xFF
-
+    # calculate the centroid of a ball where frame_mask is a binary frame
+    # sets self.ballPixelLoc and returns if ball was found or not
+    def calcBallCenter(self, frameMask):
         # find connected components to extract the location of the ball(s)
         # You need to choose 4 or 8 for connectivity type
-        connectivity = 4
+        connectivity = 8
         # Perform the operation
-        output = cv2.connectedComponentsWithStats(frame_diff, connectivity)
+        connectedComps = cv2.connectedComponentsWithStats(frameMask, connectivity)
         # Get the results
         # The first cell is the number of labels
-        num_labels = output[0]
+        numLabels = connectedComps[0]
         # The second cell is the label matrix
-        labels = output[1]
+        labels = connectedComps[1]
         # The third cell is the stat matrix
-        stats = output[2]
+        stats = connectedComps[2]
         # The fourth cell is the centroid matrix
-        centroids = output[3]
+        centroids = connectedComps[3]
+        print numLabels, centroids
+
+        # draw on mask...
+        centroidFrame = np.array(frameMask)
+        for i in range(0,numLabels):
+            center = np.around(centroids[i]).astype(int)
+            centroidFrame = cv2.circle(centroidFrame, tuple(center), 10, (180,105,255), -1)
+        cv2.imshow('frame',cv2.resize(frameMask, (960, 540)))
+        cv2.waitKey(1)
+
         #largest_label = np.argmax(stats[1:, cv2.CC_STAT_AREA])
         # background is largest component with label 0
         # ball should be next largest component with label 1
-
-        cnts = cv2.findContours(frame_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = cv2.findContours(frameMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        foundBall = False
         if len(cnts) > 1:
-        #if num_labels > 1:
-            #ball_only = np.zeros_like(frame_diff)
-            #ball_label = 2
-            #ball_only[labels == ball_label] = 255
-            #cv2.imshow('ball only ' + str(frame_id), cv2.resize(ball_only, (960, 540)))
-            #print 'Number of connected components found: ' + str(num_labels)
-            #print 'Label of largest component: ' + str(largest_label)
-
-            #cnts = cv2.findContours(frame_diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             cnt = cnts[0]
             M = cv2.moments(cnt)
             cX = int(M["m10"] / M["m00"])
             #print cX
             cY = int(M["m01"] / M["m00"])
             #print cY
-            ball_centroid = tuple(np.rint((cX, cY)).astype(int))
-
-                # # draw the contour and center of the shape on the image
-                # cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
-                # cv2.circle(image, (cX, cY), 7, (255, 255, 255), -1)
-                # cv2.putText(image, "center", (cX - 20, cY - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                # # show the image
-                # cv2.imshow("Image", image)
-
-
-            #ball_centroid = centroids[ball_label]
-            print 'Centroid of ball for frame ' + str(frame_id) + ': ' + str(ball_centroid)
-
-            # put circle on top of ball in original frame
-            # make the circle orange
-            #cv2.circle(img, center, radius, color[, thickness[, lineType[, shift]]])
-            ball_frame = cv2.circle(frame, ball_centroid, 10, (180,105,255), -1)
-            cv2.imshow('ball in frame ' + str(frame_id), cv2.resize(ball_frame, (960, 540)))
-            cv2.waitKey(10)
-            #c = cv2.waitKey(1) & 0xFF
+            ballCentroid = tuple(np.rint((cX, cY)).astype(int))
+            print ballCentroid
+            foundBall = True
+            self.ballPixelLoc = list(ballCentroid)
+            # print 'Centroid of ball for frame: ' + str(ballCentroid)
         else:
-            print 'No ball found in frame ' + str(frame_id)
+            print 'No ball found in frame'
+        return foundBall
+
+    # puts a circle of ball size at the last known ball location
+    # returns the edited frame
+    def drawBallOnFrame(self, frame):
+        # put circle on top of ball in original frame
+        # make the circle pink
+        #cv2.circle(img, center, radius, color[, thickness[, lineType[, shift]]])
+        ballFrame = cv2.circle(frame, tuple(self.ballPixelLoc), 10, (180,105,255), -1)
+        return ballFrame
 
 
 
+def main():
 
-            #c = cv2.waitKey(1) & 0xFF
+    filename = '../UntrackedFiles/clip25.mp4'
+    vr = VideoReader(filename)
+    # having 2 video readers is much much faster than resetting next frame id
+    vr2 = VideoReader(filename)
+    bf = BallFinder()
 
+    numFrames = int(vr.getNumFrames())
+    vr2.setNextFrame(5) # for background subtraction, 5 frames ahead-ish
+    done = False
+    while(not(done)):
+        ret, frame = vr.readFrame()
+        ret2, frame2 = vr2.readFrame()
+        if not(ret) or not(ret2):
+            done = True
+        else:
+            frameDiff = bf.maskDiff(frame, frame2)
+            findBall = bf.calcBallCenter(frameDiff)
+            frame = bf.drawBallOnFrame(frame)
+            #cv2.imshow('frame',cv2.resize(frameDiff, (960, 540)))
+            #cv2.waitKey(1)
 
-
-            # vr.playVideo()
-
-        # # quit sequence:
-        # print "press q enter to quit "
-        # done = False
-        # while(not(done)):
-        #     c = sys.stdin.read(1)
-        #     if c == 'q':
-        #        done = True
+    # # quit sequence:
+    # print "press q enter to quit "
+    # done = False
+    # while(not(done)):
+    #     c = sys.stdin.read(1)
+    #     if c == 'q':
+    #        done = True
 
     vr.close()
 
