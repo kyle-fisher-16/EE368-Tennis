@@ -37,15 +37,15 @@ class BallFinder(object):
         mask1 = cv2.inRange(hsvFrame1, self.lowerCol, self.upperCol)
         mask2 = cv2.inRange(hsvFrame2, self.lowerCol, self.upperCol)
         # remember that these are uints, so no negative values
-        # means that only ball in first frame will appear
-        # if want balls in both frames, use bitwise xor
-        frameDiff = mask1 - mask2
+        # xor to get 2 distinct balls, then and with original to only get first ball
+        frameDiff = mask1 ^ mask2
+        frameBall1 = frameDiff & mask1
         if withFilt:
             se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
-            frameDiffFilt = cv2.morphologyEx(frameDiff, cv2.MORPH_OPEN, se)
-            return frameDiffFilt
+            frameBall1Filt = cv2.morphologyEx(frameBall1, cv2.MORPH_OPEN, se)
+            return frameBall1Filt
         else:
-            return frameDiff
+            return frameBall1
 
     # calculate the centroid of a ball where frame_mask is a binary frame
     # sets self.ballPixelLoc and returns if ball was found or not
@@ -64,35 +64,18 @@ class BallFinder(object):
         stats = connectedComps[2]
         # The fourth cell is the centroid matrix
         centroids = connectedComps[3]
-        print numLabels, centroids
-
-        # draw on mask...
-        centroidFrame = np.array(frameMask)
-        for i in range(0,numLabels):
-            center = np.around(centroids[i]).astype(int)
-            centroidFrame = cv2.circle(centroidFrame, tuple(center), 10, (180,105,255), -1)
-        cv2.imshow('frame',cv2.resize(frameMask, (960, 540)))
-        cv2.waitKey(1)
 
         #largest_label = np.argmax(stats[1:, cv2.CC_STAT_AREA])
         # background is largest component with label 0
         # ball should be next largest component with label 1
-        cnts = cv2.findContours(frameMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         foundBall = False
-        if len(cnts) > 1:
-            cnt = cnts[0]
-            M = cv2.moments(cnt)
-            cX = int(M["m10"] / M["m00"])
-            #print cX
-            cY = int(M["m01"] / M["m00"])
-            #print cY
-            ballCentroid = tuple(np.rint((cX, cY)).astype(int))
-            print ballCentroid
+        print numLabels
+        if numLabels > 1:
+            self.ballPixelLoc = np.around(centroids[1]).astype(int)
             foundBall = True
-            self.ballPixelLoc = list(ballCentroid)
-            # print 'Centroid of ball for frame: ' + str(ballCentroid)
         else:
             print 'No ball found in frame'
+
         return foundBall
 
     # puts a circle of ball size at the last known ball location
@@ -126,9 +109,10 @@ def main():
             frameDiff = bf.maskDiff(frame, frame2)
             findBall = bf.calcBallCenter(frameDiff)
             frame = bf.drawBallOnFrame(frame)
-            #cv2.imshow('frame',cv2.resize(frameDiff, (960, 540)))
-            #cv2.waitKey(1)
+            cv2.imshow('frame',cv2.resize(frame, (960, 540)))
+            cv2.waitKey(1)
 
+    # cv2.imwrite('../UntrackedFiles/frame_diff.jpg', frame_diff)
     # # quit sequence:
     # print "press q enter to quit "
     # done = False
