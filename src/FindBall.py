@@ -15,11 +15,12 @@ import sys
 class BallFinder(object):
     def __init__(self):
         # hsv in opencv: h [0,179], s [0,255], v [0,255]
-        self.ballColHsv = np.array([int(44), int(115), int(250)])
+        # self.ballColHsv = np.array([int(44), int(115), int(240)])
+        self.ballColHsv = np.array([int(44), 127, int(240)])
         # far away balls have very small saturation levels
-        satThresh = 75;
-        valThresh = 5;
-        hueThresh = 20;
+        satThresh = 127;
+        valThresh = 15;
+        hueThresh = 30;
         self.lowerCol = self.ballColHsv - [hueThresh, satThresh, valThresh]
         self.upperCol = self.ballColHsv + [hueThresh, satThresh, valThresh]
         # centroid of found ball in motion for tracking
@@ -46,6 +47,17 @@ class BallFinder(object):
             return frameBall1Filt
         else:
             return frameBall1
+
+    # returns the binary frame filtered in HSV space where filtered for ball color
+    def hsvFilt(self, frame, withFilt=True):
+        hsvFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        ballFrame = cv2.inRange(hsvFrame, self.lowerCol, self.upperCol)
+        if withFilt:
+            se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+            frameBallFilt = cv2.morphologyEx(ballFrame, cv2.MORPH_OPEN, se)
+            return frameBallFilt
+        else:
+            return ballFrame
 
     # calculate the centroid of a ball where frame_mask is a binary frame
     # sets self.ballPixelLoc and returns if ball was found or not
