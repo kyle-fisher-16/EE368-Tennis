@@ -45,7 +45,7 @@ class Camera:
 
     self.CourtCorners = courtCorners.copy();
     self.CameraMatrix = np.asarray([[fx, 0, cx], [0, fy, cy], [0, 0, 1]]);
-    self.DistCoeffs = np.zeros((4,1));#np.asarray([k1, k2, p1, p2]);
+    self.DistCoeffs = np.zeros((4,1));
   
     # FIND CAMERA POSITION
     imgCoords = np.transpose(courtCorners);
@@ -57,7 +57,9 @@ class Camera:
     self.Position = - (np.matmul(R_inv,tVec))
     #print self.Position
 
-    # FIND MAPPING FROM CAM TO WORLD
+
+
+    # FIND MAPPING FROM CAM TO WORLD @ Y==0
     camPoints = np.zeros((4,2), dtype="float32");
     for i in range(0,4):
       pt = self.GetPinholePoint(self.CourtCorners[i,:]);
@@ -91,16 +93,24 @@ class Camera:
 from FindCourtCorners import FindCourtCorners
 cap = cv2.VideoCapture('../UntrackedFiles/angle3_5.mp4')
 _, frame = cap.read()
-courtCorners = np.asarray([[1171,  471],
-                           [1729,  525],
-                           [ 930,  879],
-                           [  51,  658]], dtype = "float");
+#courtCorners = np.asarray([[1171,  471],
+#                           [1729,  525],
+#                           [ 930,  879],
+#                           [  51,  658]], dtype = "float");
+
+courtCorners = np.asarray([[1165,  468],
+                           [1740,  524],
+                           [ 928,  879],
+                           [  28,  659]], dtype = "float");
 
 
 kyleCam = Camera("kyle", courtCorners);
-idx=0;
+#print kyleCam.Position
 
-#print kyleCam.ConvertPixelToCourtPosition(np.asarray([1171,471]));
+for idx in range(0,4):
+  print kyleCam.ConvertWorldToImagePosition(np.asarray([kyleCam.WORLD_POINTS[idx,:]])) - courtCorners[idx, :];
+
+#print kyleCam.ConvertPixelToCourtPosition(courtCorners[idx, :]) - kyleCam.WORLD_POINTS[idx,:];
 
 
 
