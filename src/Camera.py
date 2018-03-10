@@ -99,10 +99,10 @@ class Camera:
 # D is the corresponding point on ray1
 # E is the corresponding point on ray2
 def IntersectRays(ray1, ray2):
-  A = np.asarray([1,0,0]);
-  a = np.asarray([1,0.5,0]);
-  B = np.asarray([0,1,0]);
-  b = np.asarray([0,1,0]);
+  A = ray1[0];
+  a = ray1[1];
+  B = ray2[0];
+  b = ray2[1];
   c = B - A;
   aa = np.dot(a,a);
   ac = np.dot(a,c);
@@ -115,8 +115,8 @@ def IntersectRays(ray1, ray2):
   dist = np.linalg.norm(D-E);
   return (pt, dist, D, E);
 
-
-# TEST:
+#
+## TEST:
 #from FindCourtCorners import FindCourtCorners
 #cap = cv2.VideoCapture('../UntrackedFiles/stereoClip5_Megan.mov')
 #_, frame = cap.read()
@@ -126,3 +126,4 @@ def IntersectRays(ray1, ray2):
 #ray2 = kyleCam.GetRay([900,900]);
 #print IntersectRays(ray1, ray2);
 #print kyleCam.Position;
+
