@@ -182,6 +182,9 @@ class CourtFinder(object):
         # Find centroids among intersection clusters. These are considered corners.
         dilate_sz = int(width / 50);
         isect_mask = cv2.morphologyEx(isect_mask, cv2.MORPH_DILATE, np.ones((dilate_sz,dilate_sz)));
+        dilate_sz = int(width / 35);
+        court_mask_dilated = cv2.morphologyEx(court_mask, cv2.MORPH_DILATE, np.ones((dilate_sz,dilate_sz)));
+        isect_mask = isect_mask  & court_mask_dilated;
         im2, contours, hier = cv2.findContours(isect_mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE);
         if file_output:
             cv2.imwrite("../UntrackedFiles/out/isect_dots.png", isect_mask * 255);
