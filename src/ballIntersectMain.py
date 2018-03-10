@@ -8,6 +8,7 @@ from VideoReader import VideoReader
 from FindBall import BallFinder
 from FindCourtCorners import CourtFinder
 from Camera import Camera, IntersectRays
+from kalmanFilter import KalmanFilter
 
 # Gets list of pixel coordinates of ball candidate positions
 def getBallCandidateRays(bf, cam, frame1, frame2):
@@ -39,13 +40,10 @@ def main():
     # find court corners:
     cfKyle = CourtFinder()
     cfMegan = CourtFinder()
-
     numFrames = int(vrMegan1.getNumFrames())
-
     vrMegan1.setNextFrame(int(numFrames/2))
     ret, frame = vrMegan1.readFrame()
     cfMegan.FindCourtCorners(frame, 0)
-
     vrKyle1.setNextFrame(int(numFrames/2))
     ret, frame = vrKyle1.readFrame()
     cfKyle.FindCourtCorners(frame, 0)
@@ -54,12 +52,12 @@ def main():
     vrMegan1.setNextFrame(0)
     vrKyle1.setNextFrame(0)
 
-
     meganCam = Camera("megan", cfMegan.corners_sort);
     kyleCam = Camera("kyle", cfKyle.corners_sort);
 
     # make a ball finder
     bf = BallFinder()
+    kf = KalmanFilter(vrMegan1.framerate)
 
     done = False
     while(not(done)):
@@ -76,7 +74,7 @@ def main():
             minDist = 1000000; # TODO set inf
             ballPt = [];
             # all ball points and distances
-            threshDist = 10;
+            threshDist = 0.1;   # rays must be within .1 m of each other for intersect
             ballCandidates = [];
             candidateCertainty = [];
             for kyleRay in kyleRays:
@@ -89,8 +87,10 @@ def main():
                     if dist < minDist:
                         minDist = dist;
                         ballPt = pt;
-            print ballPt[0], ',', ballPt[1], ',', ballPt[2]
-            print len(ballCandidates)
+            #print ballPt[0], ',', ballPt[1], ',', ballPt[2]
+            #print minDist, len(ballCandidates)
+            kf.processMeas(ballCandidates,candidateCertainty)
+            print np.reshape(kf.mu_k, (1,6))
 
 
     vrKyle1.close()
@@ -100,47 +100,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-#
-#def calcAvgFrame(frames):
-#  numFrames = len(frames);
-#  sumFrame = np.zeros(frames[0].shape, dtype="uint32");
-#  print 'SUM FRAME SHAPE:', sumFrame.shape
-#    for i in range(0, numFrames):
-#      sumFrame += frames[i];
-#    sumFrame /= numFrames;
-#    return sumFrame.astype(np.uint8);
-# cf
-
-# # calculate average frame for background
-# numFrameForAve = 10;
-# ret, sumFrame = vr.readFrame()
-# sumFrame = sumFrame.astype(np.int16)
-# for i in range(1,numFrameForAve):
-#     ret, frame = vr.readFrame()
-#     sumFrame += frame.astype(np.int16)
-# avgFrame = sumFrame/numFrameForAve
-# avgFrame = avgFrame.astype(np.uint8)
-#
-# # reset video reader index to beginning again
-# vr.setNextFrame(0)
-
-
-
-#            findBall = bf.calcBallCenter(mask)
-#            frame = bf.drawBallOnFrame(frame)
-#            if cf.found_corners:
-#                frame = cf.drawCornersOnFrame(frame)
-#            cv2.imshow('frame',cv2.resize(mask, (960, 540)))
-#            cv2.waitKey(1)
-
-# cv2.imwrite('../UntrackedFiles/frame_diff.jpg', frame_diff)
-# # quit sequence:
-# print "press q enter to quit "
-# done = False
-# while(not(done)):
-#     c = sys.stdin.read(1)
-#     if c == 'q':
-#        done = True
