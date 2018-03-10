@@ -64,3 +64,6 @@ class VideoReader(object):
             self.vid.set(cv2.CAP_PROP_POS_FRAMES, idx)
         else:
             print 'error: index out of frame range'
+
+    def getTemporalAverage(self, startIdx, endIdx):
+        prevIdx = self.vid.get
