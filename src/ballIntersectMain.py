@@ -11,24 +11,23 @@ from Camera import Camera, IntersectRays
 
 # Gets list of pixel coordinates of ball candidate positions
 def getBallCandidateRays(bf, cam, frame1, frame2):
-  frameDiff1 = bf.hsvDiff(frame1, frame2)
-  frameDiff2 = bf.rgbDiff(frame1, frame2)
-  frameCornerMask = bf.GetCornernessMask(frame1, frame2)
-  mask = bf.aveMask(frameDiff1, frameDiff2, frameCornerMask)
-  im2, contours, hier = cv2.findContours(mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
-  candidates = [];
-  for c in contours:
-    center = cv2.minAreaRect(c)[0];
-    ray = cam.GetRay(center);
-    candidates.append(ray);
-  
-  return candidates
+    frameDiff1 = bf.hsvDiff(frame1, frame2)
+    frameDiff2 = bf.rgbDiff(frame1, frame2)
+    frameCornerMask = bf.GetCornernessMask(frame1, frame2)
+    mask = bf.aveMask(frameDiff1, frameDiff2, frameCornerMask)
+    im2, contours, hier = cv2.findContours(mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+    candidates = [];
+    for c in contours:
+        center = cv2.minAreaRect(c)[0];
+        ray = cam.GetRay(center);
+        candidates.append(ray);
+    return candidates
 
 def main():
 
     meganFilename = '../UntrackedFiles/stereoClip5_Megan.mov'
     kyleFilename = '../UntrackedFiles/stereoClip5_Kyle.mov'
-    
+
     vrMegan1 = VideoReader(meganFilename)
     vrMegan2 = VideoReader(meganFilename)
     vrKyle1 = VideoReader(kyleFilename)
@@ -36,29 +35,29 @@ def main():
     numFrameForward = 5
     vrMegan2.setNextFrame(numFrameForward)
     vrKyle2.setNextFrame(numFrameForward)
-    
+
     # find court corners:
     cfKyle = CourtFinder()
     cfMegan = CourtFinder()
-    
+
     numFrames = int(vrMegan1.getNumFrames())
-    
+
     vrMegan1.setNextFrame(int(numFrames/2))
     ret, frame = vrMegan1.readFrame()
     cfMegan.FindCourtCorners(frame, 0)
-    
+
     vrKyle1.setNextFrame(int(numFrames/2))
     ret, frame = vrKyle1.readFrame()
-    cfKyle.FindCourtCorners(frame, 1)
-    
+    cfKyle.FindCourtCorners(frame, 0)
+
     # reset frame index to beginning
     vrMegan1.setNextFrame(0)
     vrKyle1.setNextFrame(0)
-    
-    
+
+
     meganCam = Camera("megan", cfMegan.corners_sort);
     kyleCam = Camera("kyle", cfKyle.corners_sort);
-    
+
     # make a ball finder
     bf = BallFinder()
 
@@ -71,19 +70,28 @@ def main():
         if not(ret1) or not(ret2) or not (ret3) or not (ret4):
             done = True
         else:
-          kyleRays = getBallCandidateRays(bf, kyleCam, kyleFrame1, kyleFrame2);
-          meganRays = getBallCandidateRays(bf, meganCam, meganFrame1, meganFrame2);
-          
-          minDist = 1000000; # TODO set inf
-          ballPt = [];
-          for kyleRay in kyleRays:
-            for meganRay in meganRays:
-              pt, dist, _D, _E = IntersectRays(kyleRay, meganRay)
-              if dist < minDist:
-                minDist = dist;
-                ballPt = pt;
-          print ballPt[0], ',', ballPt[1], ',', ballPt[2]
-        
+            kyleRays = getBallCandidateRays(bf, kyleCam, kyleFrame1, kyleFrame2);
+            meganRays = getBallCandidateRays(bf, meganCam, meganFrame1, meganFrame2);
+
+            minDist = 1000000; # TODO set inf
+            ballPt = [];
+            # all ball points and distances
+            threshDist = 10;
+            ballCandidates = [];
+            candidateCertainty = [];
+            for kyleRay in kyleRays:
+                for meganRay in meganRays:
+                    pt, dist, _D, _E = IntersectRays(kyleRay, meganRay)
+                    if dist < threshDist:
+                        # don't include candidates clearly not valid intersect points
+                        ballCandidates.append(pt)
+                        candidateCertainty.append(dist)
+                    if dist < minDist:
+                        minDist = dist;
+                        ballPt = pt;
+            print ballPt[0], ',', ballPt[1], ',', ballPt[2]
+            print len(ballCandidates)
+
 
     vrKyle1.close()
     vrKyle2.close()
@@ -136,4 +144,3 @@ if __name__ == '__main__':
 #     c = sys.stdin.read(1)
 #     if c == 'q':
 #        done = True
-

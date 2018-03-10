@@ -126,6 +126,7 @@ class BallFinder(object):
         return mask
 
     # calculate the centroid of a ball where frame_mask is a binary frame
+    # this only works if the ball is the largest foreground object
     # sets self.ballPixelLoc and returns if ball was found or not
     def calcBallCenter(self, frameMask):
         # find connected components to extract the location of the ball(s)
