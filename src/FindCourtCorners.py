@@ -132,8 +132,8 @@ class CourtFinder(object):
         # Draw the outline of the court
         court_mask_color = np.zeros(frame.shape);
         court_mask_color = (cv2.drawContours(court_mask_color,[max_c],0,(0, 255, 0),-1));
-        court_mask = cv2.inRange(court_mask_color, (0,255,0), (0, 255, 0));
-        court_outline = cv2.Canny(court_mask,100,200)
+        court_mask_bw = cv2.inRange(court_mask_color, (0,255,0), (0, 255, 0));
+        court_outline = cv2.Canny(court_mask_bw,100,200)
 
         # Dilate the outline to help out the Hough transform.
         dilate_sz = int(width / 450);
@@ -182,8 +182,12 @@ class CourtFinder(object):
         # Find centroids among intersection clusters. These are considered corners.
         dilate_sz = int(width / 50);
         isect_mask = cv2.morphologyEx(isect_mask, cv2.MORPH_DILATE, np.ones((dilate_sz,dilate_sz)));
-        dilate_sz = int(width / 35);
-        court_mask_dilated = cv2.morphologyEx(court_mask, cv2.MORPH_DILATE, np.ones((dilate_sz,dilate_sz)));
+        dilate_sz = int(width / 15);
+        court_mask_dilated = cv2.morphologyEx(court_mask_bw, cv2.MORPH_DILATE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(dilate_sz,dilate_sz)));
+        court_mask_dilated = cv2.morphologyEx(court_mask_dilated, cv2.MORPH_DILATE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(dilate_sz,dilate_sz)));
+        court_mask_dilated = cv2.morphologyEx(court_mask_dilated, cv2.MORPH_DILATE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(dilate_sz,dilate_sz)));
+        if file_output:
+          cv2.imwrite("../UntrackedFiles/out/court_mask_dilated.png", court_mask_dilated);
         isect_mask = isect_mask  & court_mask_dilated;
         im2, contours, hier = cv2.findContours(isect_mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE);
         if file_output:
