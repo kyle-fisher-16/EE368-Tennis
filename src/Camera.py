@@ -18,7 +18,6 @@ class Camera:
                              [ HALF_COURT_X, 0, -HALF_COURT_Z],
                              [ HALF_COURT_X, 0,  HALF_COURT_Z],
                              [-HALF_COURT_X, 0,  HALF_COURT_Z]]);
-  
 
   def __init__(self, cameraName, courtCorners):
     if cameraName == "kyle":
@@ -49,12 +48,12 @@ class Camera:
   
     # FIND CAMERA POSITION
     imgCoords = np.transpose(courtCorners);
-    _, rVec, tVec = cv2.solvePnP(self.WORLD_POINTS.reshape((4,1,3)), courtCorners.reshape((4,1,2)), self.CameraMatrix, self.DistCoeffs,flags=cv2.SOLVEPNP_ITERATIVE);
+    _, rVec, tVec = cv2.solvePnP(self.WORLD_POINTS.reshape((4,1,3)), np.asarray(courtCorners.reshape((4,1,2)), dtype="float"), self.CameraMatrix, self.DistCoeffs,flags=cv2.SOLVEPNP_ITERATIVE);
     self.RotationVec = rVec.copy();
     self.Rotation = cv2.Rodrigues(rVec)[0];
     self.TranslationVec = tVec.copy();
     R_inv = np.transpose(self.Rotation);
-    self.Position = - (np.matmul(R_inv,tVec))
+    self.Position = - (np.matmul(R_inv,tVec))[:,0]
     #print self.Position
 
 
@@ -85,36 +84,45 @@ class Camera:
     res /= res[2];
     return np.asarray([res[0], 0.0, res[1]]);
   
-  # Very inaccurate, for some reason. Off by 30+ pixels.
+  # Very inaccurate, for some reason. Off by 30+ pixels. Court not planar?
   def ConvertWorldToImagePosition(self, pt):
     return cv2.projectPoints(pt, self.RotationVec, self.TranslationVec, self.CameraMatrix, self.DistCoeffs)[0][0][0];
 
+  def GetRay(self, pxPosition):
+    ctPos = self.ConvertPixelToCourtPosition(pxPosition)
+    ctMinusCam = ctPos - self.Position;
+    return (self.Position, ctMinusCam / np.linalg.norm(ctMinusCam));
 
-from FindCourtCorners import FindCourtCorners
-cap = cv2.VideoCapture('../UntrackedFiles/angle3_5.mp4')
-_, frame = cap.read()
-#courtCorners = np.asarray([[1171,  471],
-#                           [1729,  525],
-#                           [ 930,  879],
-#                           [  51,  658]], dtype = "float");
-
-courtCorners = np.asarray([[1165,  468],
-                           [1740,  524],
-                           [ 928,  879],
-                           [  28,  659]], dtype = "float");
-
-
-kyleCam = Camera("kyle", courtCorners);
-#print kyleCam.Position
-
-for idx in range(0,4):
-  print kyleCam.ConvertWorldToImagePosition(np.asarray([kyleCam.WORLD_POINTS[idx,:]])) - courtCorners[idx, :];
-
-#print kyleCam.ConvertPixelToCourtPosition(courtCorners[idx, :]) - kyleCam.WORLD_POINTS[idx,:];
-
-
+# output:
+# pt is the closest point between rays
+# dist is the distance of the two rays at their nearest crossing
+# D is the corresponding point on ray1
+# E is the corresponding point on ray2
+def IntersectRays(ray1, ray2):
+  A = np.asarray([1,0,0]);
+  a = np.asarray([1,0.5,0]);
+  B = np.asarray([0,1,0]);
+  b = np.asarray([0,1,0]);
+  c = B - A;
+  aa = np.dot(a,a);
+  ac = np.dot(a,c);
+  bb = np.dot(b,b);
+  ab = np.dot(a,b);
+  bc = np.dot(b,c);
+  D = A + a * ((ac*bb - ab*bc) / (aa*bb - ab*ab));
+  E = B + b * ((ab*ac - bc*aa) / (aa*bb - ab*ab));
+  pt = (D+E)/2;
+  dist = np.linalg.norm(D-E);
+  return (pt, dist, D, E);
 
 
-
-
-
+# TEST:
+#from FindCourtCorners import FindCourtCorners
+#cap = cv2.VideoCapture('../UntrackedFiles/stereoClip5_Megan.mov')
+#_, frame = cap.read()
+#succ, courtCorners = FindCourtCorners(frame,1);
+#kyleCam = Camera("kyle", courtCorners);
+#ray1 = kyleCam.GetRay([800,800]);
+#ray2 = kyleCam.GetRay([900,900]);
+#print IntersectRays(ray1, ray2);
+#print kyleCam.Position;
