@@ -27,9 +27,9 @@ def getBallCandidateRays(bf, cam, frame1, frame2):
 def main():
 
     # Pretty videos:
-    fourcc = cv2.VideoWriter_foXXurcc(*'XVID');
-    kyleOutputVideo = cv2.VideoWriter('../UntrackedFiles/BallOutputKyle.avi',fourcc, 60.0, (1920,1080));
-    meganOutputVideo = cv2.VixdeoWriter('../UntrackedFiles/BallOutputMegan.avi',fourcc, 60.0, (1920,1080));
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v');
+    kyleOutputVideo = cv2.VideoWriter('../UntrackedFiles/BallOutputKyle.mp4',fourcc, 60.0, (1920,1080));
+    meganOutputVideo = cv2.VideoWriter('../UntrackedFiles/BallOutputMegan.mp4',fourcc, 60.0, (1920,1080));
     meganFilename = '../UntrackedFiles/stereoClip5_Megan.mov'
     kyleFilename = '../UntrackedFiles/stereoClip5_Kyle.mov'
 
@@ -73,7 +73,7 @@ def main():
         if not(ret1) or not(ret2) or not (ret3) or not (ret4):
             print 'Ending after', frameNum-1, 'frames.'
             break;
-    
+
         kyleRays = getBallCandidateRays(bf, kyleCam, kyleFrame1, kyleFrame2);
         meganRays = getBallCandidateRays(bf, meganCam, meganFrame1, meganFrame2);
 
@@ -99,7 +99,7 @@ def main():
                         minDist = dist;
                         ballPt = pt;
         kf.processMeas(ballCandidates,candidateCertainty)
-        
+
         # ========== CSV and VIDEO output ===========
         csvTuple = list();
         csvTuple.append(frameNum);
