@@ -24,9 +24,12 @@ def getBallCandidateRays(bf, cam, frame1, frame2):
         ray = cam.GetRay(center);
         candidates.append(ray);
     return candidates
-
 def main():
 
+    # Pretty videos:
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v');
+    kyleOutputVideo = cv2.VideoWriter('../UntrackedFiles/BallOutputKyle.mp4',fourcc, 60.0, (1920,1080));
+    meganOutputVideo = cv2.VideoWriter('../UntrackedFiles/BallOutputMegan.mp4',fourcc, 60.0, (1920,1080));
     meganFilename = '../UntrackedFiles/stereoClip5_Megan.mov'
     kyleFilename = '../UntrackedFiles/stereoClip5_Kyle.mov'
 
@@ -52,6 +55,7 @@ def main():
     # reset frame index to beginning
     vrMegan1.setNextFrame(0)
     vrKyle1.setNextFrame(0)
+    frameNum = 1;
 
     meganCam = Camera("megan", cfMegan.corners_sort);
     kyleCam = Camera("kyle", cfKyle.corners_sort);
@@ -60,55 +64,83 @@ def main():
     bf = BallFinder()
     kf = KalmanFilter(vrMegan1.framerate)
 
-    ballStateEst = []
-    done = False
-    while(not(done)):
+    csvData = []
+    while(True):
         ret1, kyleFrame1 = vrKyle1.readFrame()
         ret2, kyleFrame2, = vrKyle2.readFrame()
         ret3, meganFrame1 = vrMegan1.readFrame()
         ret4, meganFrame2, = vrMegan2.readFrame()
         if not(ret1) or not(ret2) or not (ret3) or not (ret4):
-            done = True
-        else:
-            kyleRays = getBallCandidateRays(bf, kyleCam, kyleFrame1, kyleFrame2);
-            meganRays = getBallCandidateRays(bf, meganCam, meganFrame1, meganFrame2);
+            print 'Ending after', frameNum-1, 'frames.'
+            break;
 
-            minDist = 1000000; # TODO set inf
-            ballPt = [];
-            # all ball points and distances
-            threshDist = 0.1;   # rays must be within .1 m of each other for intersect
-            ballCandidates = [];
-            candidateCertainty = [];
-            for kyleRay in kyleRays:
-                for meganRay in meganRays:
-                    pt, dist, _D, _E = IntersectRays(kyleRay, meganRay)
-                    if dist < threshDist and pt[1] < 2:
-                        # don't include candidates clearly not valid intersect points
-                        # also don't include candidates that are clearly too high to be the ball
-                        courtBuffer = 2
-                        if pt[0]< Camera.HALF_COURT_X+courtBuffer and pt[0]> -Camera.HALF_COURT_X-courtBuffer:
-                            # if pt[2]< Camera.HALF_COURT_Z + courtBuffer and pt[2] > -Camera.HALF_COURT_Z-courtBuffer:
-                            ballCandidates.append(pt)
-                            candidateCertainty.append(dist)
+        kyleRays = getBallCandidateRays(bf, kyleCam, kyleFrame1, kyleFrame2);
+        meganRays = getBallCandidateRays(bf, meganCam, meganFrame1, meganFrame2);
+
+        # check all candidate rays for candidate balls
+        minDist = 1000000; # TODO set inf
+        ballPt = [];
+        # all ball points and distances
+        threshDist = 0.1;   # rays must be within .1 m of each other for intersect
+        ballCandidates = [];
+        candidateCertainty = [];
+        for kyleRay in kyleRays:
+            for meganRay in meganRays:
+                pt, dist, _D, _E = IntersectRays(kyleRay, meganRay)
+                if dist < threshDist and pt[1] < 2:
+                    # don't include candidates clearly not valid intersect points
+                    # also don't include candidates that are clearly too high to be the ball
+                    courtBuffer = 2
+                    if pt[0]< Camera.HALF_COURT_X+courtBuffer and pt[0]> -Camera.HALF_COURT_X-courtBuffer:
+                        # if pt[2]< Camera.HALF_COURT_Z + courtBuffer and pt[2] > -Camera.HALF_COURT_Z-courtBuffer:
+                        ballCandidates.append(pt)
+                        candidateCertainty.append(dist)
                     if dist < minDist:
                         minDist = dist;
                         ballPt = pt;
-            #print ballPt[0], ',', ballPt[1], ',', ballPt[2]
-            #print minDist, len(ballCandidates)
-            kf.processMeas(ballCandidates,candidateCertainty)
-            if np.linalg.norm(kf.sigma_k,'fro') < 100:
-                ballStateEst.append(list(np.reshape(kf.mu_k, (1,6))[0]))
-            # otherwise haven't really found ball
-            print np.linalg.norm(kf.sigma_k,'fro')
-    #print ballStateEst
+        kf.processMeas(ballCandidates,candidateCertainty)
+
+        # ========== CSV and VIDEO output ===========
+        csvTuple = list();
+        csvTuple.append(frameNum);
+        if np.linalg.norm(kf.sigma_k,'fro') < 100: # valid result
+            # Format the tuple for successful reading
+            csvTuple.append(1);
+            posVel = np.reshape(kf.mu_k, (1,6))[0];
+            posVel = np.round(posVel, 3);
+            for val in posVel:
+                csvTuple.append(val);
+            for val in kyleCam.ConvertWorldToImagePosition(posVel[0:3]):
+                csvTuple.append(val);
+            for val in meganCam.ConvertWorldToImagePosition(posVel[0:3]):
+                csvTuple.append(val);
+            # Videos
+            kyleOutFrame = kyleFrame1.copy();
+            bf.ballPixelLoc = kyleCam.ConvertWorldToImagePosition(posVel[0:3]);
+            kyleOutFrame = bf.drawBallOnFrame(kyleOutFrame);
+            kyleOutputVideo.write(kyleOutFrame);
+            meganOutFrame = meganFrame1.copy();
+            bf.ballPixelLoc = meganCam.ConvertWorldToImagePosition(posVel[0:3]);
+            meganOutFrame = bf.drawBallOnFrame(meganOutFrame);
+            meganOutputVideo.write(meganOutFrame);
+        else:
+            # Format the tuple for unsuccessful reading
+            csvTuple.append(0);
+        csvData.append(list(csvTuple))
+        print csvTuple
+        frameNum += 1;
+        # <END WHILE LOOP>
+
     with open('../UntrackedFiles/ballEst.csv', 'wb') as csvfile:
         filewriter = csv.writer(csvfile, delimiter=',')
-        filewriter.writerows(ballStateEst)
+        filewriter.writerows(csvData)
 
     vrKyle1.close()
     vrKyle2.close()
     vrMegan1.close()
     vrMegan2.close()
+    kyleOutputVideo.release();
+    meganOutputVideo.release();
 
 if __name__ == '__main__':
-    main()
+        main()
