@@ -117,10 +117,12 @@ def main():
             # Videos
             kyleOutFrame = kyleFrame1.copy();
             bf.ballPixelLoc = kyleCam.ConvertWorldToImagePosition(posVel[0:3]);
+            kyleOutFrame = cfKyle.drawCornersOnFrame(kyleOutFrame)
             kyleOutFrame = bf.drawBallOnFrame(kyleOutFrame);
             kyleOutputVideo.write(kyleOutFrame);
             meganOutFrame = meganFrame1.copy();
             bf.ballPixelLoc = meganCam.ConvertWorldToImagePosition(posVel[0:3]);
+            meganOutFrame = cfMegan.drawCornersOnFrame(meganOutFrame)
             meganOutFrame = bf.drawBallOnFrame(meganOutFrame);
             meganOutputVideo.write(meganOutFrame);
         else:
