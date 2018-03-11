@@ -13,7 +13,6 @@ import csv
 from mpl_toolkits.mplot3d import Axes3D
 
 
-
 def main():
 
     # get file names
@@ -67,6 +66,7 @@ def main():
     csvfile.close()
 
     # parameters for results file
+    msToMPH = 2.23694
     xPosMin = -7
     xPosMax = 7
     yPosMin = 0
@@ -89,18 +89,24 @@ def main():
     frame1 = cv.cvtColor(frame1, cv.COLOR_BGR2RGB)
     frame1Height = vr1.height
     frame1Width = vr1.width
-    numFrames1 = vr1.numFrames
+    numFrames1 = int(vr1.numFrames)
     print "Frames in video 1: " + str(numFrames1)
     vr2.setNextFrame(currentFrame)
     ret2, frame2, = vr2.readFrame()
     frame2 = cv.cvtColor(frame2, cv.COLOR_BGR2RGB)
     frame2Height = vr2.height
     frame2Width = vr2.width
-    numFrames2 = vr2.numFrames
+    numFrames2 = int(vr2.numFrames)
     print "Frames in video 2: " + str(numFrames2)
     print "Frames in data: " + str(numFramesData)
     frameOffset = int(numFrames1 - numFramesData - 5)
     numFrames = int(min(min(numFrames1, numFrames2), numFramesData))
+
+    # compute velocity in MPH
+    if ballFound[currentFrame]:
+        [xv, yv, zv] = velocityData[currentFrame, :]
+        velMPH = np.sqrt((xv * msToMPH) ** 2 + (yv * msToMPH) ** 2 + (zv * msToMPH) ** 2)
+        print 'Velocity: ' + str(velMPH) + ' mph'
 
     # corners of court
     corners1 = [(1161, 431), (1758, 479), (1368, 978), (76, 716)]
@@ -108,7 +114,7 @@ def main():
 
     # create figure and show first frame
     fig = plt.figure(figsize=(12, 8))
-    fig.tight_layout()
+    #fig.tight_layout()
     plt.ion()
     ax1 = fig.add_subplot(2,2,1)
     ax1.xaxis.set_visible(False)
@@ -116,32 +122,47 @@ def main():
     ax1.set_title("Megan's Camera")
     im1 = ax1.imshow(frame1)
     for x, y in corners1:
-        ax1.scatter(x, y, s=4, c='red', marker='o')
+        ax1.scatter(x, y, s=16, c='red', marker='o')
     ax2 = fig.add_subplot(2,2,2)
     ax2.xaxis.set_visible(False)
     ax2.yaxis.set_visible(False)
     ax2.set_title("Kyle's Camera")
     im2 = ax2.imshow(frame2)
     for x, y in corners2:
-        ax2.scatter(x, y, s=4, c='red', marker='o')
+        ax2.scatter(x, y, s=16, c='red', marker='o')
 
     # top view of court
     ax3 = fig.add_subplot(2, 2, 3)
     ax3.xaxis.set_visible(False)
     ax3.yaxis.set_visible(False)
     im3 = ax3.imshow(courtTopView)
+    #speedText = 'Speed: ' + str(round(velMPH, 2)) + ' mph'
+    #ax3.text(4, 4, speedText, fontsize=12)
 
     # 3D scatterplot
     ax4 = fig.add_subplot(2,2,4, projection = '3d')
     ax4.set_xlim([zPosMin, zPosMax])
+    ax4.set_xticks(np.arange(-20, 21, 10))
     ax4.set_xlabel("Court Length (m)")
     ax4.set_ylim([xPosMin, xPosMax])
+    ax4.set_yticks(np.arange(-6, 7, 3))
     ax4.set_ylabel("Court Width (m)")
     ax4.set_zlim([yPosMin, yPosMax])
+    ax4.set_zticks(np.arange(0, 4, 1))
     ax4.set_zlabel("Ball Height (m)")
     ax4.set_aspect('equal')
 
     plt.show()
+
+    # output video file
+    imFilename = '../UntrackedFiles/imageOutput/image' + str(currentFrame) + '.png'
+    plt.savefig(imFilename)
+    # vidFrame = cv.imread(imFilename)
+    # vidFrameHeight, vidFrameWidth, _ = vidFrame.shape
+    # outFilename = '../UntrackedFiles/testVideo.mp4'
+    # fourcc = cv.VideoWriter_fourcc(*'mp4v');
+    # outputVideo = cv.VideoWriter(outFilename,fourcc, 60, (vidFrameWidth,vidFrameHeight));
+    # outputVideo.write(vidFrame)
 
     # update plots in real-time
     for f in range(1, numFrames):
@@ -153,42 +174,56 @@ def main():
         ret2, frame2, = vr2.readFrame()
         frame2 = cv.cvtColor(frame2, cv.COLOR_BGR2RGB)
 
+        # compute velocity in MPH
+        if ballFound[f]:
+            [xv, yv, zv] = velocityData[f, :]
+            velMPH = np.sqrt((xv * msToMPH) ** 2 + (yv * msToMPH) ** 2 + (zv * msToMPH) ** 2)
+            #print 'Velocity: ' + str(velMPH) + ' mph'
+            speedText = 'Speed: ' + str(round(velMPH, 2)) + ' mph'
+            ax3.set_title(speedText)
+            #ax3.text(4, 4, speedText, fontsize=12)
+
         # Megan's camera
         im1.set_data(frame1)
         if ballFound[f]:  # plot pixel coordinates of ball
             [x1, y1] = pixelsMegan[f,:]
-            ax1.scatter(x1, y1, s=1, c='purple', marker='x')
+            ax1.scatter(x1, y1, s=1, c='pink', marker='x')
 
         # Kyle's camera
         im2.set_data(frame2)
         if ballFound[f]:
             [x2, y2] = pixelsKyle[f,:]
-            ax2.scatter(x2, y2, s=1, c='purple', marker='x')
+            ax2.scatter(x2, y2, s=1, c='pink', marker='x')
 
         # court graphic
         if ballFound[f]:
             [x, y, z] = positionData[f, :]
-            xc = int(round(((x - xCourtMin) / xCourtMax) * xCourtWidth))
-            yc = int(round(((z - yCourtMin) / yCourtMax) * yCourtLength))
-            if xc >= 0 and xc <= courtWidth and yc >= 0 and yc <= courtHeight:
-                ax3.scatter(xc, yc, s=2, c='yellow', marker='o')
+            if x > xCourtMin and x < xCourtMax and z > yCourtMin and z < yCourtMax:
+                xc = int(round(((x - xCourtMin) / (2 * xCourtMax)) * courtWidth))
+                yc = int(round(((z - yCourtMin) / (2 * yCourtMax)) * courtHeight))
+                ax3.scatter(xc, yc, s=2, c='pink', marker='o')
+
 
         # 3D scatterplot
         if ballFound[f]:
             [x, y, z] = positionData[f, :]
             ax4.scatter(z, x, y, s=2, c='blue', marker='o')
 
-
         # update plots
-        if currentFrame == numFrames:
-            while True:
-                plt.show()
-        else:
-            plt.show()
-            plt.savefig('../UntrackedFiles/imageOutput/image' + str(f) + '.png')
-            plt.pause(0.00001)
 
-        # get next frame
+        plt.show()
+        imFilename = '../UntrackedFiles/imageOutput/image' + str(f) + '.png'
+        fig.set_size_inches(12, 8)
+        plt.savefig(imFilename, dpi=100)
+        #vidFrame = cv.imread(imFilename)
+        #outputVideo.write(vidFrame)
+        plt.pause(0.00001)
+
+    # close video readers
+    vr1.close()
+    vr2.close()
+    outputVideo.release()
+
 
 
 
