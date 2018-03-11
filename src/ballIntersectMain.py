@@ -1,5 +1,6 @@
 # for useability interface/ user input to quit display
 import sys
+import csv
 
 import cv2
 import numpy as np
@@ -59,6 +60,7 @@ def main():
     bf = BallFinder()
     kf = KalmanFilter(vrMegan1.framerate)
 
+    ballStateEst = []
     done = False
     while(not(done)):
         ret1, kyleFrame1 = vrKyle1.readFrame()
@@ -80,18 +82,28 @@ def main():
             for kyleRay in kyleRays:
                 for meganRay in meganRays:
                     pt, dist, _D, _E = IntersectRays(kyleRay, meganRay)
-                    if dist < threshDist:
+                    if dist < threshDist and pt[1] < 2:
                         # don't include candidates clearly not valid intersect points
-                        ballCandidates.append(pt)
-                        candidateCertainty.append(dist)
+                        # also don't include candidates that are clearly too high to be the ball
+                        courtBuffer = 2
+                        if pt[0]< Camera.HALF_COURT_X+courtBuffer and pt[0]> -Camera.HALF_COURT_X-courtBuffer:
+                            # if pt[2]< Camera.HALF_COURT_Z + courtBuffer and pt[2] > -Camera.HALF_COURT_Z-courtBuffer:
+                            ballCandidates.append(pt)
+                            candidateCertainty.append(dist)
                     if dist < minDist:
                         minDist = dist;
                         ballPt = pt;
             #print ballPt[0], ',', ballPt[1], ',', ballPt[2]
             #print minDist, len(ballCandidates)
             kf.processMeas(ballCandidates,candidateCertainty)
-            print np.reshape(kf.mu_k, (1,6))
-
+            if np.linalg.norm(kf.sigma_k,'fro') < 100:
+                ballStateEst.append(list(np.reshape(kf.mu_k, (1,6))[0]))
+            # otherwise haven't really found ball
+            print np.linalg.norm(kf.sigma_k,'fro')
+    #print ballStateEst
+    with open('../UntrackedFiles/ballEst.csv', 'wb') as csvfile:
+        filewriter = csv.writer(csvfile, delimiter=',')
+        filewriter.writerows(ballStateEst)
 
     vrKyle1.close()
     vrKyle2.close()

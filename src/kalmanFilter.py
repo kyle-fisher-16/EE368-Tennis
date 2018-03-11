@@ -42,7 +42,7 @@ class KalmanFilter(object):
         # maybe try particle filter with unknown correspondence?
         # now need to come up with initial ball estimates
         self.mu_k = np.zeros((6,1))
-        self.sigma_k = np.identity(6) * 10000000.0
+        self.sigma_k = np.eye(6) * 100.0
         self.Q = np.identity(6)*self.dt   # model noise covariance
         self.R = 0.1*np.identity(3)   # measurement noise covariance. keep to be threshold of ray intersect distance
         self.A_k = np.identity(6) + np.eye(6,k=3)*self.dt
@@ -56,9 +56,9 @@ class KalmanFilter(object):
         mu_k1 = np.matmul(self.A_k,self.mu_k) + self.Bk_uk
         # now adjust for if bounce off ground:
         if mu_k1[1] < 0:
-            # estimate perfect rebound off ground, exactly reflects pos and vel
+            # estimate rebound off ground, exactly reflects pos, vel/2
             mu_k1[1] = -mu_k1[1]
-            mu_k1[4] = -mu_k1[4]
+            mu_k1[4] = -0.5*mu_k1[4]
         sigma_k1 = np.matmul(np.matmul(self.A_k,self.sigma_k),self.A_k.T) + self.Q
         # return mu_k1, sigma_k1
         self.mu_k = mu_k1
@@ -83,7 +83,9 @@ class KalmanFilter(object):
         # matches prediction value closest
         numMeas = len(measList)
         self.predict()
-        # if numMeas == 0, no valid measurements, estimate ball location only by prediction:
+        if numMeas == 0:
+            # no valid measurements, estimate ball location only by prediction:
+            print 'no measurements received'
         if numMeas > 0:
             minDistToPred = float('inf')
             closestToPred_mu = []
@@ -113,12 +115,23 @@ class KalmanFilter(object):
                     minMeasDist = measCertainty[i]
                     minMeas_mu = mu_k1
                     minMeas_sig = sig_k1
-
+                    # minMeas_mu = y_k
             # if covariance fairly small, then already fairly certain in current ball position estimate
             # threshold to be tuned....
             if np.linalg.norm(self.sigma_k, 'fro') < 12:
-                self.mu_k = closestToPred_mu
-                self.sigma_k = closestToPred_sig
+                distFromPrev = np.linalg.norm(closestToPred_mu - self.mu_k)
+                if distFromPrev < 7:
+                    self.mu_k = closestToPred_mu
+                    self.sigma_k = closestToPred_sig
+                else:
+                    print 'using prediction only', distFromPrev
+            elif np.linalg.norm(self.sigma_k, 'fro') > 200:
+                # really have no idea where are, reset to measurement?
+                # self.mu_k = np.vstack((np.reshape(minMeas_mu, (3,1)),np.zeros((3,1))))
+                self.mu_k = minMeas_mu
+                # reset sigma_k
+                #self.sigma_k = np.eye(6) * 100.0
+                self.sigma_k = minMeas_sig
             else:
                 self.mu_k = minSig_mu
                 self.sig_k1 = minSig_sig
