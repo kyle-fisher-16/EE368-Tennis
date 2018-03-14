@@ -98,6 +98,7 @@ class Camera:
     isectPtPinhole = np.matmul(self.InvHomog, isectPt.reshape(3,1));
     isectPtPinhole /= isectPtPinhole[2];
     pxPt = cv2.projectPoints(isectPtPinhole.reshape(1,1,3), np.identity(3), np.asarray([0,0,0], dtype="float"), self.CameraMatrix, self.DistCoeffs)[0][0][0];
+    pxPt = np.maximum(np.asarray([0,0]), pxPt);
     return np.asarray(pxPt, dtype="uint32")
 
   def GetRay(self, pxPosition):
