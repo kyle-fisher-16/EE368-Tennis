@@ -15,6 +15,9 @@ from mpl_toolkits.mplot3d import Axes3D
 
 def main():
 
+    # generate poster photos?
+    posterPhotos = False
+
     # get file names
     videoFile1 = sys.argv[1]
     videoFile2 = sys.argv[2]
@@ -166,50 +169,51 @@ def main():
     # outputVideo.write(vidFrame)
 
     # for poster
-    # Megan's camera
-    fig1 = plt.figure(figsize=(12, 8))
-    fig1ax1 = fig1.add_subplot(1, 1, 1)
-    fig1ax1.xaxis.set_visible(False)
-    fig1ax1.yaxis.set_visible(False)
-    fig1ax1.set_title("iPhone Camera #1")
-    fim1 = fig1ax1.imshow(frame1)
-    for x, y in corners1:
-        fig1ax1.scatter(x, y, s=16, c='red', marker='o')
-    fig1.show()
+    if posterPhotos:
+        # Megan's camera
+        fig1 = plt.figure(figsize=(12, 8))
+        fig1ax1 = fig1.add_subplot(1, 1, 1)
+        fig1ax1.xaxis.set_visible(False)
+        fig1ax1.yaxis.set_visible(False)
+        fig1ax1.set_title("iPhone Camera #1")
+        fim1 = fig1ax1.imshow(frame1)
+        for x, y in corners1:
+            fig1ax1.scatter(x, y, s=16, c='red', marker='o')
+        fig1.show()
 
-    # Kyle's Camera
-    fig2 = plt.figure(figsize=(12, 8))
-    fig2ax1 = fig2.add_subplot(1, 1, 1)
-    fig2ax1.xaxis.set_visible(False)
-    fig2ax1.yaxis.set_visible(False)
-    fig2ax1.set_title("iPhone Camera #2")
-    fim2 = fig2ax1.imshow(frame2)
-    for x, y in corners2:
-        fig2ax1.scatter(x, y, s=16, c='red', marker='o')
-    fig2.show()
+        # Kyle's Camera
+        fig2 = plt.figure(figsize=(12, 8))
+        fig2ax1 = fig2.add_subplot(1, 1, 1)
+        fig2ax1.xaxis.set_visible(False)
+        fig2ax1.yaxis.set_visible(False)
+        fig2ax1.set_title("iPhone Camera #2")
+        fim2 = fig2ax1.imshow(frame2)
+        for x, y in corners2:
+            fig2ax1.scatter(x, y, s=16, c='red', marker='o')
+        fig2.show()
 
-    # court graphic
-    fig3 = plt.figure(figsize=(6, 8))
-    fig3ax1 = fig3.add_subplot(1, 1, 1)
-    fig3ax1.xaxis.set_visible(False)
-    fig3ax1.yaxis.set_visible(False)
-    fig3ax1.imshow(courtTopView)
-    fig3.show()
+        # court graphic
+        fig3 = plt.figure(figsize=(6, 8))
+        fig3ax1 = fig3.add_subplot(1, 1, 1)
+        fig3ax1.xaxis.set_visible(False)
+        fig3ax1.yaxis.set_visible(False)
+        fig3ax1.imshow(courtTopView)
+        fig3.show()
 
-    # 3D scatterplot
-    fig4 = plt.figure(figsize=(12, 8))
-    fig4ax1 = fig4.add_subplot(1, 1, 1, projection = '3d')
-    fig4ax1.set_xlim([zPosMin, zPosMax])
-    fig4ax1.set_xticks(np.arange(-20, 21, 10))
-    fig4ax1.set_xlabel("Court Length (m)")
-    fig4ax1.set_ylim([xPosMin, xPosMax])
-    fig4ax1.set_yticks(np.arange(-6, 7, 3))
-    fig4ax1.set_ylabel("Court Width (m)")
-    fig4ax1.set_zlim([yPosMin, yPosMax])
-    fig4ax1.set_zticks(np.arange(0, 4, 1))
-    fig4ax1.set_zlabel("Ball Height (m)")
-    fig4ax1.set_aspect('equal')
-    fig4.show()
+        # 3D scatterplot
+        fig4 = plt.figure(figsize=(12, 8))
+        fig4ax1 = fig4.add_subplot(1, 1, 1, projection = '3d')
+        fig4ax1.set_xlim([zPosMin, zPosMax])
+        fig4ax1.set_xticks(np.arange(-20, 21, 10))
+        fig4ax1.set_xlabel("Court Length (m)")
+        fig4ax1.set_ylim([xPosMin, xPosMax])
+        fig4ax1.set_yticks(np.arange(-6, 7, 3))
+        fig4ax1.set_ylabel("Court Width (m)")
+        fig4ax1.set_zlim([yPosMin, yPosMax])
+        fig4ax1.set_zticks(np.arange(0, 4, 1))
+        fig4ax1.set_zlabel("Ball Height (m)")
+        fig4ax1.set_aspect('equal')
+        fig4.show()
 
 
     # update plots in real-time
@@ -226,44 +230,63 @@ def main():
         if ballFound[f]:
             [xv, yv, zv] = velocityData[f, :]
             velMPH = np.sqrt((xv * msToMPH) ** 2 + (yv * msToMPH) ** 2 + (zv * msToMPH) ** 2)
-            #print 'Velocity: ' + str(velMPH) + ' mph'
             speedText = 'Speed: ' + str(int(round(velMPH))) + ' mph'
             ax3.set_title(speedText)
-            #ax3.text(4, 4, speedText, fontsize=12)
 
         # Megan's camera
         im1.set_data(frame1)
-        fim1.set_data(frame1)
+        if posterPhotos:
+            fim1.set_data(frame1)
         if ballFound[f]:  # plot pixel coordinates of ball
             [x1, y1] = pixelsMegan[f,:]
             ax1.scatter(x1, y1, s=1, c='pink', marker='x')
-            fig1ax1.scatter(x1, y1, s=1, c='pink', marker='x')
+            if posterPhotos:
+                fig1ax1.scatter(x1, y1, s=1, c='pink', marker='x')
 
         # Kyle's camera
         im2.set_data(frame2)
-        fim2.set_data(frame2)
+        if posterPhotos:
+            fim2.set_data(frame2)
         if ballFound[f]:
             [x2, y2] = pixelsKyle[f,:]
             ax2.scatter(x2, y2, s=1, c='pink', marker='x')
-            fig2ax1.scatter(x2, y2, s=1, c='pink', marker='x')
+            if posterPhotos:
+                fig2ax1.scatter(x2, y2, s=1, c='pink', marker='x')
 
         # court graphic
         if ballFound[f]:
             [x, y, z] = positionData[f, :]
             if x > xCourtMin and x < xCourtMax and z > yCourtMin and z < yCourtMax:
-                xc = int(round(((x - xCourtMin) / (2 * xCourtMax)) * courtWidth))
-                yc = int(round(((z - yCourtMin) / (2 * yCourtMax)) * courtHeight))
+                xc = int(round(((x - xCourtMin) / (2 * xCourtMax)) * (courtWidth-6)))
+                yc = int(round(((z - yCourtMin) / (2 * yCourtMax)) * (courtHeight-6)))
                 ax3.scatter(xc, yc, s=2, c='pink', marker='o')
-                fig3ax1.scatter(xc, yc, s=2, c='pink', marker='o')
+                if posterPhotos:
+                    fig3ax1.scatter(xc, yc, s=2, c='pink', marker='o')
 
         # 3D scatterplot
         if ballFound[f]:
             [x, y, z] = positionData[f, :]
-            ax4.scatter(z, x, y, s=2, c='blue', marker='o')
-            fig4ax1.scatter(z, x, y, s=2, c='blue', marker='o')
+            # change colors based on speed
+            if velMPH >= 30:
+                ax4.scatter(z, x, y, s=2, c='pink', marker='o')
+            elif velMPH < 30 and velMPH >= 25:
+                ax4.scatter(z, x, y, s=2, c='red', marker='o')
+            elif velMPH < 25 and velMPH >= 20:
+                ax4.scatter(z, x, y, s=2, c='orange', marker='o')
+            elif velMPH < 20 and velMPH >= 15:
+                ax4.scatter(z, x, y, s=2, c='yellow', marker='o')
+            elif velMPH < 15 and velMPH >= 10:
+                ax4.scatter(z, x, y, s=2, c='green', marker='o')
+            elif velMPH < 10 and velMPH >= 5:
+                ax4.scatter(z, x, y, s=2, c='blue', marker='o')
+            else:
+                ax4.scatter(z, x, y, s=2, c='purple', marker='o')
+
+            if posterPhotos:
+                fig4ax1.scatter(z, x, y, s=2, c='blue', marker='o')
 
         # graphics for poster
-        if f == 100:
+        if posterPhotos and f == 100:
 
             # Megan's camera
             fig1.show()
