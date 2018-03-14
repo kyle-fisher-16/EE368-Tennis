@@ -1,9 +1,9 @@
 
 import cv2
 import numpy as np
- 
+
 class Camera:
-  
+
   CameraMatrix = [];
   DistCoeffs = [];
   Position = [];
@@ -12,7 +12,8 @@ class Camera:
   CourtCorners = [];
   Homog = [];
 
-  HALF_COURT_X = 4.115;
+  # HALF_COURT_X = 4.115;
+  HALF_COURT_X = 5.485
   HALF_COURT_Z = 11.885;
   WORLD_POINTS = np.asarray([[-HALF_COURT_X, 0, -HALF_COURT_Z],
                              [ HALF_COURT_X, 0, -HALF_COURT_Z],
@@ -45,7 +46,7 @@ class Camera:
     self.CourtCorners = courtCorners.copy();
     self.CameraMatrix = np.asarray([[fx, 0, cx], [0, fy, cy], [0, 0, 1]]);
     self.DistCoeffs = np.asarray([ k1, k2, p1, p2 ]) #np.zeros((4,1)); # TODO: fill
-  
+
     # FIND CAMERA POSITION
     imgCoords = np.transpose(courtCorners);
     _, rVec, tVec = cv2.solvePnP(self.WORLD_POINTS.reshape((4,1,3)), np.asarray(courtCorners.reshape((4,1,2)), dtype="float"), self.CameraMatrix, self.DistCoeffs,flags=cv2.SOLVEPNP_ITERATIVE);
@@ -85,7 +86,7 @@ class Camera:
     res = np.matmul(self.Homog, pt2);
     res /= res[2];
     return np.asarray([res[0], 0.0, res[1]]);
-  
+
   # Convert 3d point to 2d pixel position
   def ConvertWorldToImagePosition(self, pt):
     # solve for court point
@@ -140,4 +141,3 @@ def IntersectRays(ray1, ray2):
 #kyleCam = Camera("kyle", corners);
 #for i in range (0, 1):
 #  print kyleCam.ConvertWorldToImagePosition(np.asarray([0,3,0]));
-

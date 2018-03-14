@@ -87,7 +87,7 @@ def main():
         for kyleRay in kyleRays:
             for meganRay in meganRays:
                 pt, dist, _D, _E = IntersectRays(kyleRay, meganRay)
-                if dist < threshDist and pt[1] < 2:
+                if dist < threshDist and pt[1] < 3:
                     # don't include candidates clearly not valid intersect points
                     # also don't include candidates that are clearly too high to be the ball
                     courtBuffer = 2
