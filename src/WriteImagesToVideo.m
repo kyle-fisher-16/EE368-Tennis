@@ -6,19 +6,28 @@
 
 clear, close all
 
-% create video file
-outputVideo = VideoWriter('testVideo.mp4', 'MPEG-4');
-outputVideo.FrameRate = 60;
-open(outputVideo);
+frameRates = [10, 30, 60];
+clipNumber = 12;
+numRange = 0:162;
 
-% read in images
-numRange = 0:200;
-numImages = length(numRange);
-images = cell(1, numImages);
-for i = 1:numImages
-    imgNum = numRange(i);
-    img = imread(sprintf('/Users/Megan/Documents/EE 368 Project/UntrackedFiles/imageOutput/image%d.png', imgNum));
-    writeVideo(outputVideo,img)
+for f = 1:length(frameRates)
+    
+    frameRate = frameRates(f);
+    fprintf('Creating video file at %d fps...\n', frameRate);
+
+    % create video file
+    outputVideo = VideoWriter(sprintf('/Users/Megan/Documents/EE 368 Project/UntrackedFiles/demoClip%d_%dfps.mp4', clipNumber, frameRate), 'MPEG-4');
+    outputVideo.FrameRate = frameRate;
+    open(outputVideo);
+
+    % read in images
+    numImages = length(numRange);
+    images = cell(1, numImages);
+    for i = 1:numImages
+        imgNum = numRange(i);
+        img = imread(sprintf('/Users/Megan/Documents/EE 368 Project/UntrackedFiles/imageOutput/image%d.png', imgNum));
+        writeVideo(outputVideo,img)
+    end
+
+    close(outputVideo);
 end
-
-close(outputVideo);
