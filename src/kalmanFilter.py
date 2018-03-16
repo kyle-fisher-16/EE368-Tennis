@@ -44,7 +44,7 @@ class KalmanFilter(object):
         self.mu_k = np.zeros((6,1))
         self.sigma_k = np.eye(6) * 100.0
         self.Q = np.identity(6)*self.dt   # model noise covariance
-        self.R = 0.1*np.identity(3)   # measurement noise covariance. keep to be threshold of ray intersect distance
+        self.R = 0.05*np.identity(3)   # measurement noise covariance. keep to be threshold of ray intersect distance
         self.A_k = np.identity(6) + np.eye(6,k=3)*self.dt
         self.Bk_uk = np.array([[0], [0.5*self.gravity*self.dt*self.dt], [0],[0],[self.gravity*self.dt], [0]])
         self.C_k = np.hstack((np.identity(3),np.zeros((3,3))))

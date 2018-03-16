@@ -20,7 +20,7 @@ def calcAvgFrame(frames):
 
 def main():
 
-    filename = '../UntrackedFiles/stereoClip5_Megan.mov'
+    filename = '../UntrackedFiles/stereoClip11_Kyle.mov'
     vr = VideoReader(filename)
     # find court corners:
     cf = CourtFinder()
@@ -62,11 +62,7 @@ def main():
             frameDiff2 = bf.rgbDiff(frame, frame2)
             frameCornerMask = bf.GetCornernessMask(frame, frame2)
             mask = bf.aveMask(frameDiff1, frameDiff2, frameCornerMask)
-            findBall = bf.calcBallCenter(mask)
-            frame = bf.drawBallOnFrame(frame)
-            if cf.found_corners:
-                frame = cf.drawCornersOnFrame(frame)
-            cv2.imshow('frame',cv2.resize(mask, (960, 540)))
+            cv2.imshow('frame',cv2.resize(frameDiff2, (960, 540)))
             cv2.waitKey(1)
 
     # cv2.imwrite('../UntrackedFiles/frame_diff.jpg', frame_diff)

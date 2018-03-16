@@ -75,7 +75,7 @@ class BallFinder(object):
             c_ellipse = cv2.fitEllipse(c)
             rect = c_ellipse[1];
             ecc = np.max([rect[0]/(rect[1]+0.001), rect[1]/(rect[0]+0.001)]);
-            if ecc < 2 and cArea < 100:
+            if ecc < 2 and cArea < 200:
                 cv2.drawContours(maskEcc,[c],0,255,-1)
 
         colorFiltMask = self.hsvFilt(frame1, False)
