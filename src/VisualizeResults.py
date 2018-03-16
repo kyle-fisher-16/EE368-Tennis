@@ -15,8 +15,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 def main():
 
-    # generate poster photos?
-    posterPhotos = False
+    # generate poster/report photos?
+    posterPhotos = True
 
     # get file names
     videoFile1 = sys.argv[1]
@@ -117,7 +117,6 @@ def main():
 
     # create figure and show first frame
     fig = plt.figure(figsize=(12, 8))
-    #fig.tight_layout()
     plt.ion()
     ax1 = fig.add_subplot(2,2,1)
     ax1.xaxis.set_visible(False)
@@ -139,8 +138,6 @@ def main():
     ax3.xaxis.set_visible(False)
     ax3.yaxis.set_visible(False)
     im3 = ax3.imshow(courtTopView)
-    #speedText = 'Speed: ' + str(round(velMPH, 2)) + ' mph'
-    #ax3.text(4, 4, speedText, fontsize=12)
 
     # 3D scatterplot
     ax4 = fig.add_subplot(2,2,4, projection = '3d')
@@ -154,10 +151,9 @@ def main():
     ax4.set_zticks(np.arange(0, 4, 1))
     ax4.set_zlabel("Ball Height (m)")
     ax4.set_aspect('equal')
-
     fig.show()
 
-    # output video file
+    # output image files
     imFilename = '../UntrackedFiles/imageOutput/image' + str(currentFrame) + '.png'
     fig.set_size_inches(12, 8)
     plt.savefig(imFilename, dpi=200)
@@ -168,7 +164,7 @@ def main():
     # outputVideo = cv.VideoWriter(outFilename,fourcc, 60, (vidFrameWidth,vidFrameHeight));
     # outputVideo.write(vidFrame)
 
-    # for poster
+    # for poster/report
     if posterPhotos:
         # Megan's camera
         fig1 = plt.figure(figsize=(12, 8))
@@ -218,6 +214,7 @@ def main():
 
     # update plots in real-time
     for f in range(1, numFrames):
+        # get next frame
         currentFrame = f
         vr1.setNextFrame(currentFrame)
         ret1, frame1, = vr1.readFrame()
@@ -237,7 +234,7 @@ def main():
         im1.set_data(frame1)
         if posterPhotos:
             fim1.set_data(frame1)
-        if ballFound[f]:  # plot pixel coordinates of ball
+        if ballFound[f]:
             [x1, y1] = pixelsMegan[f,:]
             ax1.scatter(x1, y1, s=1, c='pink', marker='x')
             if posterPhotos:
@@ -261,7 +258,7 @@ def main():
                 yc = int(round(((z - yCourtMin) / (2 * yCourtMax)) * (courtHeight-6)))
                 ax3.scatter(xc, yc, s=2, c='pink', marker='o')
                 if posterPhotos:
-                    fig3ax1.scatter(xc, yc, s=2, c='pink', marker='o')
+                    fig3ax1.scatter(xc, yc, s=3, c='pink', marker='o')
 
         # 3D scatterplot
         if ballFound[f]:
@@ -283,10 +280,23 @@ def main():
                 ax4.scatter(z, x, y, s=2, c='purple', marker='o')
 
             if posterPhotos:
-                fig4ax1.scatter(z, x, y, s=2, c='blue', marker='o')
+                if velMPH >= 30:
+                    fig4ax1.scatter(z, x, y, s=2, c='pink', marker='o')
+                elif velMPH < 30 and velMPH >= 25:
+                    fig4ax1.scatter(z, x, y, s=2, c='red', marker='o')
+                elif velMPH < 25 and velMPH >= 20:
+                    fig4ax1.scatter(z, x, y, s=2, c='orange', marker='o')
+                elif velMPH < 20 and velMPH >= 15:
+                    fig4ax1.scatter(z, x, y, s=2, c='yellow', marker='o')
+                elif velMPH < 15 and velMPH >= 10:
+                    fig4ax1.scatter(z, x, y, s=2, c='green', marker='o')
+                elif velMPH < 10 and velMPH >= 5:
+                    fig4ax1.scatter(z, x, y, s=2, c='blue', marker='o')
+                else:
+                    fig4ax1.scatter(z, x, y, s=2, c='purple', marker='o')
 
-        # graphics for poster
-        if posterPhotos and f == 100:
+        # graphics for poster/report
+        if posterPhotos and f == numFrames - 1:
 
             # Megan's camera
             fig1.show()
@@ -321,8 +331,6 @@ def main():
     vr1.close()
     vr2.close()
     #outputVideo.release()
-
-
 
 
 if __name__ == '__main__':
