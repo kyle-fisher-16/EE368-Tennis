@@ -117,9 +117,11 @@ class CourtFinder(object):
             cv2.imwrite("../UntrackedFiles/out/court_color_rgb.png", preview);
 
         # Find the largest contour in the court mask. This is assumed to be the court.
-        close_sz = int(width / 96);
+        close_sz = int(width / 20);
         dilate_sz = int(width / 150);
-        court_mask = cv2.morphologyEx(court_mask, cv2.MORPH_CLOSE, np.ones((close_sz,close_sz)))
+        court_mask = cv2.morphologyEx(court_mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(close_sz,close_sz)))
+        if file_output:
+            cv2.imwrite("../UntrackedFiles/out/court_mask_closed.png", court_mask);
         im2, contours, hier = cv2.findContours(court_mask,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
         max_area = 0;
         max_c = None;

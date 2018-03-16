@@ -23,7 +23,7 @@ def getBallCandidateRays(bf, cam, frame1, frame2):
         center = cv2.minAreaRect(c)[0];
         ray = cam.GetRay(center);
         candidates.append(ray);
-    return candidates
+    return (np.dstack([mask,mask,mask]), candidates)
 def main():
 
     # Pretty videos:
@@ -51,6 +51,9 @@ def main():
     vrKyle1.setNextFrame(int(numFrames/2))
     ret, frame = vrKyle1.readFrame()
     cfKyle.FindCourtCorners(frame, 0)
+    if (not cfMegan.found_corners) or not(cfKyle.found_corners):
+        print "Couldn't find the court. Exiting."
+        return
 
     # reset frame index to beginning
     vrMegan1.setNextFrame(0)
@@ -74,27 +77,27 @@ def main():
             print 'Ending after', frameNum-1, 'frames.'
             break;
 
-        kyleRays = getBallCandidateRays(bf, kyleCam, kyleFrame1, kyleFrame2);
-        meganRays = getBallCandidateRays(bf, meganCam, meganFrame1, meganFrame2);
+        kyleMask, kyleRays = getBallCandidateRays(bf, kyleCam, kyleFrame1, kyleFrame2);
+        meganMask, meganRays = getBallCandidateRays(bf, meganCam, meganFrame1, meganFrame2);
 
         # check all candidate rays for candidate balls
         minDist = 1000000; # TODO set inf
         ballPt = [];
         # all ball points and distances
-        threshDist = 0.1;   # rays must be within .1 m of each other for intersect
+        threshDist = 0.2;   # rays must be within .1 m of each other for intersect
         ballCandidates = [];
         candidateCertainty = [];
         for kyleRay in kyleRays:
             for meganRay in meganRays:
                 pt, dist, _D, _E = IntersectRays(kyleRay, meganRay)
-                if dist < threshDist and pt[1] < 3:
+                if dist < threshDist and pt[1] < 3.5:
                     # don't include candidates clearly not valid intersect points
                     # also don't include candidates that are clearly too high to be the ball
                     courtBuffer = 2
                     if pt[0]< Camera.HALF_COURT_X+courtBuffer and pt[0]> -Camera.HALF_COURT_X-courtBuffer:
-                        # if pt[2]< Camera.HALF_COURT_Z + courtBuffer and pt[2] > -Camera.HALF_COURT_Z-courtBuffer:
-                        ballCandidates.append(pt)
-                        candidateCertainty.append(dist)
+                        if pt[2] < Camera.HALF_COURT_Z+0.6:# and pt[2] > -Camera.HALF_COURT_Z - 0:
+                            ballCandidates.append(pt)
+                            candidateCertainty.append(dist)
                     if dist < minDist:
                         minDist = dist;
                         ballPt = pt;
@@ -119,8 +122,10 @@ def main():
             bf.ballPixelLoc = kyleCam.ConvertWorldToImagePosition(posVel[0:3]);
             kyleOutFrame = cfKyle.drawCornersOnFrame(kyleOutFrame)
             kyleOutFrame = bf.drawBallOnFrame(kyleOutFrame);
+            kyleOutFrame |= kyleMask;
             kyleOutputVideo.write(kyleOutFrame);
             meganOutFrame = meganFrame1.copy();
+            meganOutFrame |= meganMask;
             bf.ballPixelLoc = meganCam.ConvertWorldToImagePosition(posVel[0:3]);
             meganOutFrame = cfMegan.drawCornersOnFrame(meganOutFrame)
             meganOutFrame = bf.drawBallOnFrame(meganOutFrame);
